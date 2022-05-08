@@ -13,6 +13,7 @@ This project aim to guide newcomer to understand [gofiber](https://github.com/go
 - [Welcome - Fiber (gofiber.io)](https://docs.gofiber.io/)
 - [GORM Guides | GORM - The fantastic ORM library for Golang, aims to be developer friendly.](https://gorm.io/docs/)
 - [JSON:API — Examples (jsonapi.org)](https://jsonapi.org/examples/)
+- [Effective Go](https://go.dev/doc/effective_go)
 
 ## UML diagrams
 
