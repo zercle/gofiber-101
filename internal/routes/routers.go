@@ -1,8 +1,8 @@
-package routers
+package routes
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/zercle/gofiber-101/book"
+	"github.com/zercle/gofiber-101/internal/services"
 )
 
 // we can manage router outside main()
@@ -18,27 +18,27 @@ func SetupRoutes(app *fiber.App) {
 	{
 		// GET request to `your.web/api/v1/book`
 		// will process by book.GetBooks handler
-		v1Group.Get("/book", book.GetBooks)
+		v1Group.Get("/book", services.GetBooks)
 		// GET request to `your.web/api/v1/book/{id}`
 		// will process by book.GetBook handler
 		// `id`` will parse into fiber's context Params("id")
 		// https://docs.gofiber.io/guide/routing#parameters
-		v1Group.Get("/book/:id", book.GetBook)
+		v1Group.Get("/book/:id", services.GetBook)
 		// POST request to `your.web/api/v1/book`
 		// will process by book.NewBook handler
-		v1Group.Post("/book", book.NewBook)
+		v1Group.Post("/book", services.NewBook)
 		// DELETE request to `your.web/api/v1/book/{id}`
 		// will process by book.DeleteBook handler
 		// `id`` will parse into fiber's context Params("id")
-		v1Group.Delete("/book/:id", book.DeleteBook)
+		v1Group.Delete("/book/:id", services.DeleteBook)
 	}
 
 	// group request `your.web/api/v2` to v2Group variable
 	v2Group := apiGroup.Group("/v2")
 	{
-		v2Group.Get("/book", book.GetBooks)
-		v2Group.Get("/book/:id", book.GetBook)
-		v2Group.Post("/book", book.NewBook)
-		v2Group.Delete("/book/:id", book.DeleteBook)
+		v2Group.Get("/book", services.GetBooks)
+		v2Group.Get("/book/:id", services.GetBook)
+		v2Group.Post("/book", services.NewBook)
+		v2Group.Delete("/book/:id", services.DeleteBook)
 	}
 }

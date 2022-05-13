@@ -1,44 +1,29 @@
-package book
+package services
 
 import (
-	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/zercle/gofiber-101/database"
-	"github.com/zercle/gofiber-101/model"
+	"github.com/zercle/gofiber-101/internal/datasources"
+	"github.com/zercle/gofiber-101/pkg/models"
 	"gorm.io/gorm"
 )
-
-// Book model
-// https://www.digitalocean.com/community/tutorials/how-to-use-struct-tags-in-go
-// https://gorm.io/docs/models.html
-type Book struct {
-	ID        uint           `from:"id" json:"id" gorm:"primarykey"`
-	Title     string         `from:"title" json:"title" gorm:"column:title"`
-	Author    string         `from:"author" json:"author" gorm:""`
-	Rating    json.Number    `from:"rating" json:"rating" gorm:""`
-	CreatedAt time.Time      `from:"created_at" json:"created_at" gorm:""`
-	UpdatedAt time.Time      `from:"updated_at" json:"updated_at" gorm:""`
-	DeletedAt gorm.DeletedAt `from:"deleted_at" json:"deleted_at" gorm:"index"`
-}
 
 // fiber's router will parse fiber.Ctx pointer into handler
 // that we can use for get request, send response or stores variables to next routes
 // https://docs.gofiber.io/api/ctx
 func GetBooks(ctx *fiber.Ctx) (err error) {
 	// response model for response to client
-	var responseForm model.ResponseForm
+	var responseForm models.ResponseForm
 	// init err response variable incase that need to response what's wrong to client
-	var errRespArr []model.ResposeError
+	var errRespArr []models.ResposeError
 	// init array of Book to query and store value
-	var books []Book
-	// use database connection from database.DBConn
-	db := database.DBConn
+	var books []models.Book
+	// use database connection from datasources.DBConn
+	db := datasources.DBConn
 	// gorm will query all books by Book model
 	// https://gorm.io/docs/query.html#Retrieving-all-objects
 	err = db.Find(&books).Error
@@ -53,7 +38,7 @@ func GetBooks(ctx *fiber.Ctx) (err error) {
 		// https://docs.gofiber.io/api/ctx#status
 		ctx.Status(http.StatusInternalServerError)
 		// fill error response body
-		errRespObj := model.ResposeError{
+		errRespObj := models.ResposeError{
 			// http constant from go http package
 			// https://pkg.go.dev/net/http?utm_source=gopls#pkg-constants
 			Code:   http.StatusInternalServerError,
@@ -71,7 +56,7 @@ func GetBooks(ctx *fiber.Ctx) (err error) {
 		return ctx.JSON(map[string]interface{}{"errors": errRespArr})
 	}
 
-	responseForm = model.ResponseForm{
+	responseForm = models.ResponseForm{
 		Success: bool(err == nil),
 		// we can minimize map[string]interface{} to fiber.Map{}
 		Result: fiber.Map{"books": books},
@@ -81,8 +66,8 @@ func GetBooks(ctx *fiber.Ctx) (err error) {
 }
 
 func GetBook(ctx *fiber.Ctx) (err error) {
-	var responseForm model.ResponseForm
-	var errRespArr []model.ResposeError
+	var responseForm models.ResponseForm
+	var errRespArr []models.ResposeError
 
 	// get path param from fiber's context
 	id := ctx.Params("id")
@@ -93,7 +78,7 @@ func GetBook(ctx *fiber.Ctx) (err error) {
 	if err != nil {
 		log.Printf("GetBook err: %+v", err)
 		ctx.Status(http.StatusBadRequest)
-		errRespObj := model.ResposeError{
+		errRespObj := models.ResposeError{
 			Code:    http.StatusBadRequest,
 			Source:  "GetBook",
 			Title:   http.StatusText(http.StatusBadRequest),
@@ -103,15 +88,15 @@ func GetBook(ctx *fiber.Ctx) (err error) {
 		return ctx.JSON(fiber.Map{"errors": errRespArr})
 	}
 
-	var book Book
-	db := database.DBConn
+	var book models.Book
+	db := datasources.DBConn
 	// query with condition
 	// https://gorm.io/docs/query.html#Conditions
-	err = db.Where(Book{ID: uint(intID)}).Find(&book).Error
+	err = db.Where(models.Book{ID: uint(intID)}).Find(&book).Error
 	if err != nil {
 		log.Printf("GetBook err: %+v", err)
 		ctx.Status(http.StatusInternalServerError)
-		errRespObj := model.ResposeError{
+		errRespObj := models.ResposeError{
 			Code:    http.StatusInternalServerError,
 			Source:  "GetBook",
 			Title:   http.StatusText(http.StatusInternalServerError),
@@ -121,7 +106,7 @@ func GetBook(ctx *fiber.Ctx) (err error) {
 		return ctx.JSON(fiber.Map{"errors": errRespArr})
 	}
 
-	responseForm = model.ResponseForm{
+	responseForm = models.ResponseForm{
 		Success: bool(err == nil),
 		Result:  fiber.Map{"book": book},
 	}
@@ -129,14 +114,14 @@ func GetBook(ctx *fiber.Ctx) (err error) {
 }
 
 func NewBook(ctx *fiber.Ctx) (err error) {
-	var responseForm model.ResponseForm
-	var errRespArr []model.ResposeError
-	book := new(Book)
+	var responseForm models.ResponseForm
+	var errRespArr []models.ResposeError
+	book := new(models.Book)
 	// parse request body into book model
 	if err := ctx.BodyParser(book); err != nil {
 		log.Printf("NewBook err: %+v", err)
 		ctx.Status(http.StatusUnprocessableEntity)
-		errRespObj := model.ResposeError{
+		errRespObj := models.ResposeError{
 			Code:    http.StatusUnprocessableEntity,
 			Source:  "NewBook",
 			Title:   http.StatusText(http.StatusUnprocessableEntity),
@@ -146,7 +131,7 @@ func NewBook(ctx *fiber.Ctx) (err error) {
 		return ctx.JSON(fiber.Map{"errors": errRespArr})
 	}
 
-	db := database.DBConn
+	db := datasources.DBConn
 	// use database transaction that we can rollback when something go wrong else commit when success
 	// https://gorm.io/docs/transactions.html#Control-the-transaction-manually
 	dbTx := db.Begin()
@@ -159,7 +144,7 @@ func NewBook(ctx *fiber.Ctx) (err error) {
 	if err := dbTx.Create(&book).Error; err != nil {
 		log.Printf("NewBook err: %+v", err)
 		ctx.Status(http.StatusInternalServerError)
-		errRespObj := model.ResposeError{
+		errRespObj := models.ResposeError{
 			Code:    http.StatusInternalServerError,
 			Source:  "NewBook",
 			Title:   http.StatusText(http.StatusInternalServerError),
@@ -174,7 +159,7 @@ func NewBook(ctx *fiber.Ctx) (err error) {
 	if err != nil {
 		log.Printf("NewBook err: %+v", err)
 		ctx.Status(http.StatusInternalServerError)
-		errRespObj := model.ResposeError{
+		errRespObj := models.ResposeError{
 			Code:    http.StatusInternalServerError,
 			Source:  "NewBook",
 			Title:   http.StatusText(http.StatusInternalServerError),
@@ -184,7 +169,7 @@ func NewBook(ctx *fiber.Ctx) (err error) {
 		return ctx.JSON(fiber.Map{"errors": errRespArr})
 	}
 
-	responseForm = model.ResponseForm{
+	responseForm = models.ResponseForm{
 		Success: bool(err == nil),
 		Result:  fiber.Map{"book": book},
 	}
@@ -192,15 +177,15 @@ func NewBook(ctx *fiber.Ctx) (err error) {
 }
 
 func DeleteBook(ctx *fiber.Ctx) (err error) {
-	var responseForm model.ResponseForm
-	var errRespArr []model.ResposeError
+	var responseForm models.ResponseForm
+	var errRespArr []models.ResposeError
 
 	id := ctx.Params("id")
 	intID, err := strconv.Atoi(id)
 	if err != nil {
 		log.Printf("DeleteBook err: %+v", err)
 		ctx.Status(http.StatusBadRequest)
-		errRespObj := model.ResposeError{
+		errRespObj := models.ResposeError{
 			Code:    http.StatusBadRequest,
 			Source:  "DeleteBook",
 			Title:   http.StatusText(http.StatusBadRequest),
@@ -210,13 +195,13 @@ func DeleteBook(ctx *fiber.Ctx) (err error) {
 		return ctx.JSON(fiber.Map{"errors": errRespArr})
 	}
 
-	var book Book
-	db := database.DBConn
+	var book models.Book
+	db := datasources.DBConn
 
 	dbTx := db.Begin()
 	defer dbTx.Rollback()
 
-	err = dbTx.Where(Book{ID: uint(intID)}).First(&book).Error
+	err = dbTx.Where(models.Book{ID: uint(intID)}).First(&book).Error
 	// check is record not found
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return ctx.Status(404).SendString("")
@@ -225,7 +210,7 @@ func DeleteBook(ctx *fiber.Ctx) (err error) {
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		log.Printf("DeleteBook err: %+v", err)
 		ctx.Status(http.StatusInternalServerError)
-		errRespObj := model.ResposeError{
+		errRespObj := models.ResposeError{
 			Code:    http.StatusInternalServerError,
 			Source:  "DeleteBook",
 			Title:   http.StatusText(http.StatusInternalServerError),
@@ -235,11 +220,11 @@ func DeleteBook(ctx *fiber.Ctx) (err error) {
 		return ctx.JSON(fiber.Map{"errors": errRespArr})
 	}
 
-	err = dbTx.Where(Book{ID: uint(intID)}).Delete(&book).Error
+	err = dbTx.Where(models.Book{ID: uint(intID)}).Delete(&book).Error
 	if err != nil {
 		log.Printf("DeleteBook err: %+v", err)
 		ctx.Status(http.StatusInternalServerError)
-		errRespObj := model.ResposeError{
+		errRespObj := models.ResposeError{
 			Code:    http.StatusInternalServerError,
 			Source:  "DeleteBook",
 			Title:   http.StatusText(http.StatusInternalServerError),
@@ -253,7 +238,7 @@ func DeleteBook(ctx *fiber.Ctx) (err error) {
 	if err != nil {
 		log.Printf("DeleteBook err: %+v", err)
 		ctx.Status(http.StatusInternalServerError)
-		errRespObj := model.ResposeError{
+		errRespObj := models.ResposeError{
 			Code:    http.StatusInternalServerError,
 			Source:  "DeleteBook",
 			Title:   http.StatusText(http.StatusInternalServerError),
@@ -263,7 +248,7 @@ func DeleteBook(ctx *fiber.Ctx) (err error) {
 		return ctx.JSON(fiber.Map{"errors": errRespArr})
 	}
 
-	responseForm = model.ResponseForm{
+	responseForm = models.ResponseForm{
 		Success: bool(err == nil),
 		Result:  fiber.Map{"book": book},
 	}

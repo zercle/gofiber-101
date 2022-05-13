@@ -1,4 +1,4 @@
-package database
+package datasources
 
 import "gorm.io/gorm"
 

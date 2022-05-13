@@ -6,41 +6,15 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 
-	"github.com/zercle/gofiber-101/book"
-	"github.com/zercle/gofiber-101/database"
-	"github.com/zercle/gofiber-101/routers"
+	"github.com/zercle/gofiber-101/internal/datasources"
+	"github.com/zercle/gofiber-101/internal/routes"
+	"github.com/zercle/gofiber-101/pkg/models"
 )
-
-// function call for init database connection
-// param: none
-// return: error if occur
-func initDatabase() (err error) {
-	// open connecttion to database and store connection object pointer to database.DBConn and any error to err variable
-	// https://gorm.io/docs/connecting_to_the_database.html
-	database.DBConn, err = gorm.Open(sqlite.Open("store.db"), &gorm.Config{})
-	// if err variable not nil show log message and exit app
-	if err != nil {
-		// show log message and exit app
-		log.Fatal("failed to connect database")
-	}
-	// just show log message
-	log.Println("Connection Opened to Database")
-
-	// migrate table into database by model
-	// https://gorm.io/docs/migration.html
-	err = database.DBConn.AutoMigrate(&book.Book{})
-	if err != nil {
-		log.Fatal("failed to migrate database")
-	}
-	log.Println("Database Migrated")
-	return
-}
 
 // go will start here
 func main() {
+	var err error
 	// init Fiber's app with default config
 	// https://docs.gofiber.io/api/fiber
 	app := fiber.New()
@@ -52,14 +26,25 @@ func main() {
 	app.Use(cors.New())
 
 	// call initDatabase function
-	initDatabase()
+	datasources.DBConn, err = datasources.InitSqLite()
+	if datasources.DBConn == nil || err != nil {
+		log.Fatal("failed to connect database")
+	}
+
+	// migrate table into database by model
+	// https://gorm.io/docs/migration.html
+	err = datasources.DBConn.AutoMigrate(&models.Book{})
+	if err != nil {
+		log.Fatal("failed to migrate database")
+	}
+	log.Println("Database Migrated")
 
 	// serve static files from directory `./public` to request / path
 	// https://docs.gofiber.io/api/app#static
-	app.Static("/", "./public")
+	app.Static("/", "./web")
 
 	// parse app's pointer
-	routers.SetupRoutes(app)
+	routes.SetupRoutes(app)
 
 	// app listen to port 3000/tcp (http://localhost:3000) if error app will exit by log.Fatal
 	log.Fatal(app.Listen(":3000"))

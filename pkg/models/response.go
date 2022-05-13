@@ -1,4 +1,4 @@
-package model
+package models
 
 // result object for response
 // https://jsonapi.org/examples/#sparse-fieldsets
